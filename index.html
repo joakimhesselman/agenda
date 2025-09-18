@@ -74,6 +74,16 @@
             text-decoration: line-through;
             color: #aaa;
         }
+        /* Style for date and weather input fields */
+        input[type="date"],
+        input[type="text"].weather-input {
+            background-color: #3a3a3a;
+            color: #f0f0f0;
+            border: 1px solid #444;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            width: 100%;
+        }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -121,6 +131,11 @@
             ideas: [],
             feelings: "",
             notes: "",
+            date: "",
+            weather: "",
+            excitedAbout: "",
+            difficultFeeling: "",
+            inspiredBy: "",
             weekly: {
                 måndag: [],
                 tisdag: [],
@@ -161,6 +176,11 @@
             renderWeeklyOverview();
             renderFeelings();
             renderNotes();
+            renderDate();
+            renderWeather();
+            renderExcitedAbout();
+            renderDifficultFeeling();
+            renderInspiredBy();
         }
 
         function renderTodos() {
@@ -258,6 +278,31 @@
             const notesInput = document.getElementById('notes-input');
             notesInput.value = dashboardData.notes;
         }
+        
+        function renderDate() {
+            const dateInput = document.getElementById('date-input');
+            dateInput.value = dashboardData.date;
+        }
+        
+        function renderWeather() {
+            const weatherInput = document.getElementById('weather-input');
+            weatherInput.value = dashboardData.weather;
+        }
+
+        function renderExcitedAbout() {
+            const excitedAboutInput = document.getElementById('excited-about-input');
+            excitedAboutInput.value = dashboardData.excitedAbout;
+        }
+
+        function renderDifficultFeeling() {
+            const difficultFeelingInput = document.getElementById('difficult-feeling-input');
+            difficultFeelingInput.value = dashboardData.difficultFeeling;
+        }
+        
+        function renderInspiredBy() {
+            const inspiredByInput = document.getElementById('inspired-by-input');
+            inspiredByInput.value = dashboardData.inspiredBy;
+        }
 
         window.toggleTodo = (index) => {
             if (dashboardData.todos[index]) {
@@ -310,6 +355,36 @@
             dashboardData.notes = input.value.trim();
             saveData();
         };
+        
+        window.saveDate = () => {
+            const input = document.getElementById('date-input');
+            dashboardData.date = input.value;
+            saveData();
+        }
+        
+        window.saveWeather = () => {
+            const input = document.getElementById('weather-input');
+            dashboardData.weather = input.value.trim();
+            saveData();
+        }
+        
+        window.saveExcitedAbout = () => {
+            const input = document.getElementById('excited-about-input');
+            dashboardData.excitedAbout = input.value.trim();
+            saveData();
+        }
+        
+        window.saveDifficultFeeling = () => {
+            const input = document.getElementById('difficult-feeling-input');
+            dashboardData.difficultFeeling = input.value.trim();
+            saveData();
+        }
+        
+        window.saveInspiredBy = () => {
+            const input = document.getElementById('inspired-by-input');
+            dashboardData.inspiredBy = input.value.trim();
+            saveData();
+        }
 
         window.deleteItem = (type, index) => {
             if (dashboardData[type] && dashboardData[type][index]) {
@@ -338,6 +413,12 @@
         window.exportData = () => {
             const header = `AGENDA - Din Personliga Dashboard\n${'-'.repeat(40)}\n\n`;
             let content = '';
+
+            // Sektion: Datum & Väder
+            content += 'Datum & Väder\n';
+            content += `Datum: ${dashboardData.date || 'Ej angivet'}\n`;
+            content += `Väder: ${dashboardData.weather || 'Ej angivet'}\n`;
+            content += '\n';
 
             // Sektion: Att göra
             content += 'Att göra\n';
@@ -384,6 +465,33 @@
                 content += 'Inga känslor antecknade.\n';
             }
             content += '\n';
+            
+            // Sektion: Peppad på
+            content += 'Peppad på\n';
+            if (dashboardData.excitedAbout) {
+                content += `${dashboardData.excitedAbout}\n`;
+            } else {
+                content += 'Inget angivet.\n';
+            }
+            content += '\n';
+            
+            // Sektion: Känns jobbigt
+            content += 'Känns jobbigt\n';
+            if (dashboardData.difficultFeeling) {
+                content += `${dashboardData.difficultFeeling}\n`;
+            } else {
+                content += 'Inget angivet.\n';
+            }
+            content += '\n';
+            
+            // Sektion: Inspirerad av
+            content += 'Inspirerad av\n';
+            if (dashboardData.inspiredBy) {
+                content += `${dashboardData.inspiredBy}\n`;
+            } else {
+                content += 'Inget angivet.\n';
+            }
+            content += '\n';
 
             // Sektion: Anteckningar
             content += 'Anteckningar\n';
@@ -421,6 +529,11 @@
                     addWeeklyTask(day);
                 } else if (id === 'feelings-input') saveFeelings();
                 else if (id === 'notes-input') saveNotes();
+                else if (id === 'date-input') saveDate();
+                else if (id === 'weather-input') saveWeather();
+                else if (id === 'excited-about-input') saveExcitedAbout();
+                else if (id === 'difficult-feeling-input') saveDifficultFeeling();
+                else if (id === 'inspired-by-input') saveInspiredBy();
             }
 
             // Hantera Escape-tangenten för att rensa inmatningsfält
@@ -446,6 +559,19 @@
         </header>
 
         <main class="grid grid-cols-1 gap-6">
+
+            <!-- Datum & Väder -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Datum & Väder</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <input id="date-input" type="date" onchange="saveDate()" class="w-full p-3 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">
+                    </div>
+                    <div>
+                        <input id="weather-input" type="text" placeholder="Väder idag..." oninput="saveWeather()" class="w-full p-3 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">
+                    </div>
+                </div>
+            </div>
 
             <!-- Att göra -->
             <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
@@ -479,18 +605,34 @@
                 </ul>
             </div>
 
+            <!-- Peppad på -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Peppad på</h2>
+                <textarea id="excited-about-input" rows="4" placeholder="Vad är du peppad på idag?..." oninput="saveExcitedAbout()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+            </div>
+            
+            <!-- Känns jobbigt -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känns jobbigt</h2>
+                <textarea id="difficult-feeling-input" rows="4" placeholder="Vad känns jobbigt idag?..." oninput="saveDifficultFeeling()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+            </div>
+            
+            <!-- Inspirerad av -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Inspirerad av</h2>
+                <textarea id="inspired-by-input" rows="4" placeholder="Vad har inspirerat dig nyligen?..." oninput="saveInspiredBy()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+            </div>
+
             <!-- Känslor -->
             <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
                 <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känslor</h2>
-                <textarea id="feelings-input" rows="4" placeholder="Hur mår du idag?..." class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
-                <button onclick="saveFeelings()" class="p-3 bg-[#5a5a5a] text-[#f0f0f0] font-semibold rounded-lg hover:bg-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">Spara känsla</button>
+                <textarea id="feelings-input" rows="4" placeholder="Hur mår du idag?..." oninput="saveFeelings()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
             </div>
 
             <!-- Anteckningar -->
             <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
                 <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Anteckningar</h2>
-                <textarea id="notes-input" rows="6" placeholder="Skriv ned dina anteckningar här..." class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none flex-1 border-2 border-[#444]"></textarea>
-                <button onclick="saveNotes()" class="p-3 bg-[#5a5a5a] text-[#f0f0f0] font-semibold rounded-lg hover:bg-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">Spara anteckningar</button>
+                <textarea id="notes-input" rows="6" placeholder="Skriv ned dina anteckningar här..." oninput="saveNotes()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none flex-1 border-2 border-[#444]"></textarea>
             </div>
                 
         </main>
