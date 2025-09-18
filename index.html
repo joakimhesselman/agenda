@@ -190,7 +190,7 @@
         function renderWeeklyOverview() {
             const container = document.getElementById('weekly-overview-container');
             container.innerHTML = '';
-
+            // Renderar en låda för varje dag i veckan
             days.forEach(day => {
                 const dayBox = document.createElement('div');
                 dayBox.className = `bg-[#2d2d2d] p-4 border border-[#444] flex flex-col ${day === today ? 'border-2 border-[#8a8a8a]' : ''}`;
@@ -208,19 +208,24 @@
 
                 const taskList = dayBox.querySelector(`#weekly-tasks-${day}`);
                 const tasks = dashboardData.weekly[day] || [];
-                tasks.forEach((task, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'flex items-center justify-between p-1 bg-[#444] rounded-lg text-sm border border-[#555]';
-                    li.innerHTML = `
-                        <span class="text-[#f0f0f0]">${task}</span>
-                        <button class="text-[#888] hover:text-[#aaa] transition-colors duration-200" onclick="deleteWeeklyTask('${day}', ${index})">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    `;
-                    taskList.appendChild(li);
-                });
+                // Visar "Inga uppgifter" om listan är tom, annars renderar den uppgifterna
+                if (tasks.length === 0) {
+                    taskList.innerHTML = `<li class="text-[#888] text-sm italic">Inga uppgifter.</li>`;
+                } else {
+                    tasks.forEach((task, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center justify-between p-1 bg-[#444] rounded-lg text-sm border border-[#555]';
+                        li.innerHTML = `
+                            <span class="text-[#f0f0f0]">${task}</span>
+                            <button class="text-[#888] hover:text-[#aaa] transition-colors duration-200" onclick="deleteWeeklyTask('${day}', ${index})">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        `;
+                        taskList.appendChild(li);
+                    });
+                }
             });
         }
 
