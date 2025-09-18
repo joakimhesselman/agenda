@@ -98,6 +98,33 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+        const dashboardData = {
+            todos: [],
+            ideas: [],
+            feelings: "",
+            notes: "",
+            date: "",
+            weather: "",
+            excitedAbout: "",
+            difficultFeeling: "",
+            inspiredBy: "",
+            weekly: {
+                måndag: [],
+                tisdag: [],
+                onsdag: [],
+                torsdag: [],
+                fredag: [],
+                lördag: [],
+                söndag: []
+            }
+        };
+
+        const days = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
+        const today = new Date().toLocaleDateString('sv-SE', { weekday: 'long' }).toLowerCase();
+        
+        // Renderar gränssnittet omedelbart med standarddata.
+        renderAll();
+
         if (Object.keys(firebaseConfig).length > 0) {
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
@@ -126,30 +153,6 @@
             console.error("Firebase konfigurationsdata saknas.");
         }
 
-        const dashboardData = {
-            todos: [],
-            ideas: [],
-            feelings: "",
-            notes: "",
-            date: "",
-            weather: "",
-            excitedAbout: "",
-            difficultFeeling: "",
-            inspiredBy: "",
-            weekly: {
-                måndag: [],
-                tisdag: [],
-                onsdag: [],
-                torsdag: [],
-                fredag: [],
-                lördag: [],
-                söndag: []
-            }
-        };
-
-        const days = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
-        const today = new Date().toLocaleDateString('sv-SE', { weekday: 'long' }).toLowerCase();
-        
         function listenForData() {
             if (!userId) return;
             const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'dashboard_data', 'user_data');
