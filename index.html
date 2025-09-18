@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGENDA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Roboto Mono', monospace;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
+        .scroll-container::-webkit-scrollbar-track {
+            background-color: #333;
+        }
+        .checkbox-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        .checkbox-container {
+            display: block;
+            position: relative;
+            padding-left: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .checkmark {
+            position: absolute;
+            top: 2px;
+            left: 0;
+            height: 20px;
+            width: 20px;
+            background-color: #444;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .checkbox-container input:checked ~ .checkmark {
+            background-color: #777;
+        }
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+        }
+        .checkbox-container input:checked ~ .checkmark:after {
+            display: block;
+        }
+        .checkbox-container .checkmark:after {
+            left: 7px;
+            top: 3px;
+            width: 5px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #aaa;
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        let db;
+        let auth;
+        let userId = null;
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            // Hantera autentisering
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id').textContent = userId;
+                    // Lyssna på data när användaren är inloggad
+                    listenForData();
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Fel vid inloggning:", error);
+                    }
+                }
+            });
+        } else {
+            console.error("Firebase konfigurationsdata saknas.");
+        }
+
+        const dashboardData = {
+            todos: [],
+            ideas: [],
+            feelings: "",
+            notes: "",
+            weekly: {
+                måndag: [],
+                tisdag: [],
+                onsdag: [],
+                torsdag: [],
+                fredag: [],
+                lördag: [],
+                söndag: []
+            }
+        };
+
+        const days = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
+        const today = new Date().toLocaleDateString('sv-SE', { weekday: 'long' }).toLowerCase();
+        
+        function listenForData() {
+            if (!userId) return;
+            const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'dashboard_data', 'user_data');
+            
+            onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data) {
+                        Object.assign(dashboardData, data);
+                        renderAll();
+                    }
+                } else {
+                    // Skapa en tom dokument om den inte finns
+                    setDoc(userDocRef, dashboardData);
+                }
+            }, (error) => {
+                console.error("Fel vid lyssnande på data:", error);
+            });
+        }
+
+        function renderAll() {
+            renderTodos();
+            renderList('ideas', dashboardData.ideas, 'idea-list');
+            renderWeeklyOverview();
+            renderFeelings();
+            renderNotes();
+        }
+
+        function renderTodos() {
+            const listElement = document.getElementById('todo-list');
+            listElement.innerHTML = '';
+            dashboardData.todos.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-2 bg-[#3a3a3a] rounded-lg border border-[#444]';
+                li.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <label class="checkbox-container">
+                            <input type="checkbox" ${item.completed ? 'checked' : ''} onclick="toggleTodo(${index})">
+                            <span class="checkmark"></span>
+                        </label>
+                        <span class="text-[#f0f0f0] ${item.completed ? 'completed' : ''}">${item.text}</span>
+                    </div>
+                    <button class="text-[#888] hover:text-[#aaa] transition-colors duration-200" onclick="deleteItem('todos', ${index})">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+                listElement.appendChild(li);
+            });
+        }
+
+        function renderWeeklyOverview() {
+            const container = document.getElementById('weekly-overview-container');
+            container.innerHTML = '';
+
+            days.forEach(day => {
+                const dayBox = document.createElement('div');
+                dayBox.className = `bg-[#2d2d2d] p-4 border border-[#444] flex flex-col ${day === today ? 'border-2 border-[#8a8a8a]' : ''}`;
+                dayBox.innerHTML = `
+                    <h3 class="text-xl font-semibold mb-3 text-[#f0f0f0]">${day.charAt(0).toUpperCase() + day.slice(1)}</h3>
+                    <ul id="weekly-tasks-${day}" class="space-y-2 flex-1 overflow-y-auto scroll-container pr-1">
+                        <!-- Uppgifter laddas här -->
+                    </ul>
+                    <div class="flex mt-3">
+                        <input id="weekly-task-input-${day}" type="text" placeholder="Ny uppgift..." class="flex-1 p-2 bg-[#3a3a3a] text-[#f0f0f0] border-t border-l border-b border-[#444] rounded-l-lg focus:outline-none focus:ring-1 focus:ring-[#8a8a8a] transition-colors text-sm">
+                        <button onclick="addWeeklyTask('${day}')" class="p-2 bg-[#4a4a4a] text-[#f0f0f0] font-semibold border border-[#444] rounded-r-lg hover:bg-[#5a5a5a] focus:outline-none focus:ring-1 focus:ring-[#8a8a8a] transition-colors text-sm">Lägg till</button>
+                    </div>
+                `;
+                container.appendChild(dayBox);
+
+                const taskList = dayBox.querySelector(`#weekly-tasks-${day}`);
+                const tasks = dashboardData.weekly[day] || [];
+                tasks.forEach((task, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between p-1 bg-[#444] rounded-lg text-sm border border-[#555]';
+                    li.innerHTML = `
+                        <span class="text-[#f0f0f0]">${task}</span>
+                        <button class="text-[#888] hover:text-[#aaa] transition-colors duration-200" onclick="deleteWeeklyTask('${day}', ${index})">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    `;
+                    taskList.appendChild(li);
+                });
+            });
+        }
+
+        function renderList(type, listData, elementId) {
+            const listElement = document.getElementById(elementId);
+            listElement.innerHTML = '';
+            if (listData) {
+                listData.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between p-2 bg-[#3a3a3a] rounded-lg border border-[#444]';
+                    li.innerHTML = `
+                        <span class="text-[#f0f0f0]">${item}</span>
+                        <button class="text-[#888] hover:text-[#aaa] transition-colors duration-200" onclick="deleteItem('${type}', ${index})">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    `;
+                    listElement.appendChild(li);
+                });
+            }
+        }
+        
+        function renderFeelings() {
+            const feelingInput = document.getElementById('feelings-input');
+            feelingInput.value = dashboardData.feelings;
+        }
+
+        function renderNotes() {
+            const notesInput = document.getElementById('notes-input');
+            notesInput.value = dashboardData.notes;
+        }
+
+        window.toggleTodo = (index) => {
+            if (dashboardData.todos[index]) {
+                dashboardData.todos[index].completed = !dashboardData.todos[index].completed;
+                saveData();
+            }
+        };
+
+        window.addTodo = () => {
+            const input = document.getElementById('todo-input');
+            const value = input.value.trim();
+            if (value) {
+                dashboardData.todos.push({ text: value, completed: false });
+                saveData();
+                input.value = '';
+            }
+        };
+
+        window.addIdea = () => {
+            const input = document.getElementById('idea-input');
+            const value = input.value.trim();
+            if (value) {
+                dashboardData.ideas.push(value);
+                saveData();
+                input.value = '';
+            }
+        };
+
+        window.addWeeklyTask = (day) => {
+            const input = document.getElementById(`weekly-task-input-${day}`);
+            const value = input.value.trim();
+            if (value) {
+                if (!dashboardData.weekly[day]) {
+                    dashboardData.weekly[day] = [];
+                }
+                dashboardData.weekly[day].push(value);
+                saveData();
+                input.value = '';
+            }
+        };
+
+        window.saveFeelings = () => {
+            const input = document.getElementById('feelings-input');
+            dashboardData.feelings = input.value.trim();
+            saveData();
+        };
+
+        window.saveNotes = () => {
+            const input = document.getElementById('notes-input');
+            dashboardData.notes = input.value.trim();
+            saveData();
+        };
+
+        window.deleteItem = (type, index) => {
+            if (dashboardData[type] && dashboardData[type][index]) {
+                dashboardData[type].splice(index, 1);
+                saveData();
+            }
+        };
+        
+        window.deleteWeeklyTask = (day, index) => {
+            if (dashboardData.weekly[day] && dashboardData.weekly[day][index]) {
+                dashboardData.weekly[day].splice(index, 1);
+                saveData();
+            }
+        }
+
+        function saveData() {
+            if (!userId) {
+                console.error("Användar-ID saknas, kan inte spara data.");
+                return;
+            }
+            const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'dashboard_data', 'user_data');
+            updateDoc(userDocRef, dashboardData)
+                .catch(error => console.error("Fel vid sparande av data:", error));
+        }
+
+        window.exportData = () => {
+            const header = `AGENDA - Din Personliga Dashboard\n${'-'.repeat(40)}\n\n`;
+            let content = '';
+
+            // Sektion: Att göra
+            content += 'Att göra\n';
+            if (dashboardData.todos && dashboardData.todos.length > 0) {
+                dashboardData.todos.forEach(item => {
+                    content += `- [${item.completed ? 'X' : ' '}] ${item.text}\n`;
+                });
+            } else {
+                content += 'Inga uppgifter.\n';
+            }
+            content += '\n';
+
+            // Sektion: Veckoöversikt
+            content += 'Veckoöversikt\n';
+            days.forEach(day => {
+                const tasks = dashboardData.weekly[day] || [];
+                content += `\n  ${day.charAt(0).toUpperCase() + day.slice(1)}\n`;
+                if (tasks.length > 0) {
+                    tasks.forEach(task => {
+                        content += `  - ${task}\n`;
+                    });
+                } else {
+                    content += '  Inga uppgifter.\n';
+                }
+            });
+            content += '\n';
+
+            // Sektion: Idéer
+            content += 'Idéer\n';
+            if (dashboardData.ideas && dashboardData.ideas.length > 0) {
+                dashboardData.ideas.forEach(idea => {
+                    content += `- ${idea}\n`;
+                });
+            } else {
+                content += 'Inga idéer.\n';
+            }
+            content += '\n';
+
+            // Sektion: Känslor
+            content += 'Känslor\n';
+            if (dashboardData.feelings) {
+                content += `${dashboardData.feelings}\n`;
+            } else {
+                content += 'Inga känslor antecknade.\n';
+            }
+            content += '\n';
+
+            // Sektion: Anteckningar
+            content += 'Anteckningar\n';
+            if (dashboardData.notes) {
+                content += `${dashboardData.notes}\n`;
+            } else {
+                content += 'Inga anteckningar.\n';
+            }
+            content += '\n';
+
+
+            const blob = new Blob([header, content], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'AGENDA-data.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        };
+
+    </script>
+</head>
+<body class="bg-[#1e1e1e] text-[#f0f0f0] min-h-screen p-4 sm:p-8 flex flex-col items-center">
+    <div class="w-full max-w-2xl lg:max-w-4xl">
+        <header class="text-center mb-10 flex flex-col sm:flex-row justify-between items-center">
+            <div class="flex-1 text-center sm:text-left mb-4 sm:mb-0">
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-[#f0f0f0] tracking-tight">AGENDA</h1>
+                <p class="text-gray-400 mt-2 text-lg">Din personliga dashboard för fokus och klarhet.</p>
+            </div>
+            <button onclick="exportData()" class="p-3 bg-[#4a4a4a] text-[#f0f0f0] font-semibold rounded-lg hover:bg-[#5a5a5a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors w-full sm:w-auto">
+                Exportera (.txt)
+            </button>
+        </header>
+
+        <main class="grid grid-cols-1 gap-6">
+
+            <!-- Att göra -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Att göra</h2>
+                <div class="flex mb-4">
+                    <input id="todo-input" type="text" placeholder="Ny uppgift..." class="flex-1 p-3 bg-[#3a3a3a] text-[#f0f0f0] rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-l border-t border-b border-[#444]">
+                    <button onclick="addTodo()" class="p-3 bg-[#4a4a4a] text-[#f0f0f0] font-semibold rounded-r-lg hover:bg-[#5a5a5a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-r border-t border-b border-[#444]">Lägg till</button>
+                </div>
+                <ul id="todo-list" class="space-y-3 flex-1 overflow-y-auto scroll-container pr-2">
+                    <!-- Uppgifter laddas här -->
+                </ul>
+            </div>
+
+            <!-- Veckoöversikt -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Veckoöversikt</h2>
+                <div id="weekly-overview-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dagslådor laddas här -->
+                </div>
+            </div>
+
+            <!-- Idéer -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Idéer</h2>
+                <div class="flex mb-4">
+                    <input id="idea-input" type="text" placeholder="Ny idé..." class="flex-1 p-3 bg-[#3a3a3a] text-[#f0f0f0] rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-l border-t border-b border-[#444]">
+                    <button onclick="addIdea()" class="p-3 bg-[#4a4a4a] text-[#f0f0f0] font-semibold rounded-r-lg hover:bg-[#5a5a5a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-r border-t border-b border-[#444]">Lägg till</button>
+                </div>
+                <ul id="idea-list" class="space-y-3 flex-1 overflow-y-auto scroll-container pr-2">
+                    <!-- Idéer laddas här -->
+                </ul>
+            </div>
+
+            <!-- Känslor -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känslor</h2>
+                <textarea id="feelings-input" rows="4" placeholder="Hur mår du idag?..." class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                <button onclick="saveFeelings()" class="p-3 bg-[#5a5a5a] text-[#f0f0f0] font-semibold rounded-lg hover:bg-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">Spara känsla</button>
+            </div>
+
+            <!-- Anteckningar -->
+            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Anteckningar</h2>
+                <textarea id="notes-input" rows="6" placeholder="Skriv ned dina anteckningar här..." class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none flex-1 border-2 border-[#444]"></textarea>
+                <button onclick="saveNotes()" class="p-3 bg-[#5a5a5a] text-[#f0f0f0] font-semibold rounded-lg hover:bg-[#6a6a6a] focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors border-2 border-[#444]">Spara anteckningar</button>
+            </div>
+                
+        </main>
+        
+        <footer class="mt-10 text-center text-gray-500 text-sm">
+            <p>Användar-ID: <span id="user-id" class="font-mono">Inloggning pågår...</span></p>
+        </footer>
+    </div>
+</body>
+</html>
