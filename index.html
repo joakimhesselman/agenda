@@ -457,15 +457,6 @@
             }
             content += '\n';
 
-            // Sektion: Känslor
-            content += 'Känslor\n';
-            if (dashboardData.feelings) {
-                content += `${dashboardData.feelings}\n`;
-            } else {
-                content += 'Inga känslor antecknade.\n';
-            }
-            content += '\n';
-            
             // Sektion: Peppad på
             content += 'Peppad på\n';
             if (dashboardData.excitedAbout) {
@@ -493,6 +484,16 @@
             }
             content += '\n';
 
+            // Sektion: Känslor
+            content += 'Känslor\n';
+            if (dashboardData.feelings) {
+                content += `${dashboardData.feelings}\n`;
+            } else {
+                content += 'Inga känslor antecknade.\n';
+            }
+            content += '\n';
+
+
             // Sektion: Anteckningar
             content += 'Anteckningar\n';
             if (dashboardData.notes) {
@@ -506,7 +507,10 @@
             const blob = new Blob([header, content], { type: 'text/plain;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'AGENDA-data.txt';
+            
+            const todayDate = new Date().toISOString().slice(0, 10);
+            link.download = `AGENDA-data-${todayDate}.txt`;
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -604,29 +608,32 @@
                     <!-- Idéer laddas här -->
                 </ul>
             </div>
-
-            <!-- Peppad på -->
-            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
-                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Peppad på</h2>
-                <textarea id="excited-about-input" rows="4" placeholder="Vad är du peppad på idag?..." oninput="saveExcitedAbout()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
-            </div>
             
-            <!-- Känns jobbigt -->
-            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
-                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känns jobbigt</h2>
-                <textarea id="difficult-feeling-input" rows="4" placeholder="Vad känns jobbigt idag?..." oninput="saveDifficultFeeling()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
-            </div>
-            
-            <!-- Inspirerad av -->
-            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
-                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Inspirerad av</h2>
-                <textarea id="inspired-by-input" rows="4" placeholder="Vad har inspirerat dig nyligen?..." oninput="saveInspiredBy()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
-            </div>
+            <!-- Grupperade fält i två kolumner -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Peppad på -->
+                <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                    <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Peppad på</h2>
+                    <textarea id="excited-about-input" rows="4" placeholder="Vad är du peppad på idag?..." oninput="saveExcitedAbout()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                </div>
+                
+                <!-- Känns jobbigt -->
+                <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                    <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känns jobbigt</h2>
+                    <textarea id="difficult-feeling-input" rows="4" placeholder="Vad känns jobbigt idag?..." oninput="saveDifficultFeeling()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                </div>
+                
+                <!-- Inspirerad av -->
+                <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                    <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Inspirerad av</h2>
+                    <textarea id="inspired-by-input" rows="4" placeholder="Vad har inspirerat dig nyligen?..." oninput="saveInspiredBy()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                </div>
 
-            <!-- Känslor -->
-            <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
-                <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känslor</h2>
-                <textarea id="feelings-input" rows="4" placeholder="Hur mår du idag?..." oninput="saveFeelings()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                <!-- Känslor -->
+                <div class="bg-[#2d2d2d] p-6 rounded-2xl border-2 border-[#444] flex flex-col">
+                    <h2 class="text-2xl font-bold mb-4 text-[#f0f0f0]">Känslor</h2>
+                    <textarea id="feelings-input" rows="4" placeholder="Hur mår du idag?..." oninput="saveFeelings()" class="p-3 mb-4 bg-[#3a3a3a] text-[#f0f0f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a8a8a] transition-colors resize-none border-2 border-[#444]"></textarea>
+                </div>
             </div>
 
             <!-- Anteckningar -->
